@@ -1,0 +1,13 @@
+{
+    "mqtt": {
+        "username": "hdp-user",
+        "password": "password",
+        "host": "ip-172-31-24-159.us-west-1.compute.internal",
+        "port": 1883,
+        "topic": "sensors"
+    },
+    "misc": {
+        "interval_ms": 1000,
+        "verbose": true
+    }
+}
