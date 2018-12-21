@@ -1,0 +1,107 @@
+{
+ "type": "record",
+ "namespace": "hortonworks.hdp.refapp.hydraulicrig",
+ "name": "rig_sensor_data",
+ "fields": [
+  {
+   "name": "ProcessingTime",
+   "type": "long",
+   "default": 0
+  },
+  {
+   "name": "cycleid",
+   "type": "int",
+   "default": 0
+  },
+  {
+   "name": "tstamp",
+   "type": "long",
+   "default": 0
+  },
+  {
+   "name": "psa_bar",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "psb_bar",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "psc_bar",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "psd_bar",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "pse_bar",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "psf_bar",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "motor_power_watt",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "fsa_vol_flow",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "fsb_vol_flow",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "tsa_temp",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "tsb_temp",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "tsc_temp",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "tsd_temp",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "vs_vib",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "cool_eff_pct",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "cool_pwr_kw",
+   "type": "float",
+   "default": 0
+  },
+  {
+   "name": "eff_fact_pct",
+   "type": "float",
+   "default": 0
+  }
+ ]
+}
