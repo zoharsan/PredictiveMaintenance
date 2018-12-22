@@ -1,0 +1,33 @@
+%spark2
+import org.apache.spark.sql.types._
+
+val pathSensors = "/ds_final/sensor_data_profiled"
+val dfSensors = spark.read.option("header", "false").option("delimiter", "\t").csv(pathSensors)
+
+val sensorsDF = dfSensors.select(
+     dfSensors("_c0").cast(IntegerType).as("cycleid")
+    ,dfSensors("_c1").cast(IntegerType).as("tstamp")
+    ,dfSensors("_c2").cast(DoubleType).as("ps1")
+    ,dfSensors("_c3").cast(DoubleType).as("ps2")
+    ,dfSensors("_c4").cast(DoubleType).as("ps3")
+    ,dfSensors("_c5").cast(DoubleType).as("ps4")
+    ,dfSensors("_c6").cast(DoubleType).as("ps5")
+    ,dfSensors("_c7").cast(DoubleType).as("ps6")
+    ,dfSensors("_c8").cast(DoubleType).as("eps1")    
+    ,dfSensors("_c9").cast(DoubleType).as("fs1")
+    ,dfSensors("_c10").cast(DoubleType).as("fs2")
+    ,dfSensors("_c11").cast(DoubleType).as("ts1")
+    ,dfSensors("_c12").cast(DoubleType).as("ts2")
+    ,dfSensors("_c13").cast(DoubleType).as("ts3")
+    ,dfSensors("_c14").cast(DoubleType).as("ts4")
+    ,dfSensors("_c15").cast(DoubleType).as("vs1")    
+    ,dfSensors("_c16").cast(DoubleType).as("ce")
+    ,dfSensors("_c17").cast(DoubleType).as("cp")
+    ,dfSensors("_c18").cast(DoubleType).as("se")
+    ,dfSensors("_c19").cast(DoubleType).as("cooler_cond")
+    ,dfSensors("_c20").cast(DoubleType).as("valve_cond")
+    ,dfSensors("_c21").cast(DoubleType).as("pump_leak")
+    ,dfSensors("_c22").cast(DoubleType).as("hydrau_bar")
+    ,dfSensors("_c23").cast(DoubleType).as("stable")
+    
+    )
