@@ -1,0 +1,74 @@
+import org.apache.spark.sql.streaming.ProcessingTime
+import spark.implicits._
+
+//Reading from Kafka queue
+val kafkaSensorDF = spark
+.readStream
+.format("kafka")
+.option("kafka.bootstrap.servers", "ip-172-31-24-159.us-west-1.compute.internal:6667")
+.option("subscribe", "rig_sensor_data")
+.option("startingOffsets", "latest")
+.load()
+
+// Load the LogisticRegressionModel
+import org.apache.spark.ml.PipelineModel
+val LGRModel = PipelineModel.read.load("hdfs://ip-172-31-24-159.us-west-1.compute.internal:8020/models/2018-12-13_15_50_39-LR-Cooling");
+
+//Parsing the data set in JSON and applying transformations on the timestamp
+import org.apache.spark.sql.types._
+val SensorSchema = (new StructType)
+.add("processingtime",LongType)
+.add("cycleid",IntegerType)
+.add("tstamp",LongType)
+.add("psa_bar",FloatType)
+.add("psb_bar",FloatType)
+.add("psc_bar",FloatType)
+.add("psd_bar",FloatType)
+.add("pse_bar",FloatType)
+.add("psf_bar",FloatType)
+.add("motor_power_watt",FloatType)
+.add("fsa_vol_flow",FloatType)
+.add("fsb_vol_flow",FloatType)
+.add("tsa_temp",FloatType)
+.add("tsb_temp",FloatType)
+.add("tsc_temp",FloatType)
+.add("tsd_temp",FloatType)
+.add("cool_eff_pct",FloatType)
+.add("cool_pwr_kw",FloatType)
+.add("eff_fact_pct",FloatType)
+
+
+val SensorDF = kafkaSensorDF.select(from_json($"value".cast("string"), SensorSchema).as("SensorJSON"))
+val SensorDF2 = SensorDF.withColumn("timestamp", from_unixtime(SensorDF.col("SensorJSON.processingtime").divide(1000)).cast(TimestampType))
+val SensorDF3 = SensorDF2.select("timestamp","SensorJSON.tsa_temp","SensorJSON.tsb_temp","SensorJSON.tsc_temp","SensorJSON.tsd_temp","SensorJSON.cool_eff_pct","SensorJSON.cool_pwr_kw")
+
+
+//Calculating average aggregates over 1 minute window 
+//as the Spark ML model uses 1 minute averages of sensor readings as input
+
+val FormatDF = SensorDF3.withWatermark("timestamp","1 minutes").groupBy(window($"timestamp", "1 minute"))
+.agg(
+avg("tsa_temp").alias("ts1"),
+avg("tsb_temp").alias("ts2"),
+avg("tsc_temp").alias("ts3"),
+avg("tsd_temp").alias("ts4"),
+avg("cool_eff_pct").alias("ce"),
+avg("cool_pwr_kw").alias("cp")
+).toDF("window","ts1","ts2","ts3","ts4","ce","cp")
+
+//Using the Spark ML pipeline model to score in real-time
+import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.ml.linalg.Vectors
+
+val assembler = new VectorAssembler().setInputCols(Array("ts1", "ts2", "ts3", "ts4", "ce", "cp" ))
+val VectorDF = assembler.transform(FormatDF.na.drop)
+
+val predictions =  LGRModel.transform(VectorDF).select("ts1", "ts2", "ts3","ts4","ce","cp","prediction")
+
+//Write prediction back to a kafka queue
+val SinkQuery = predictions.select(to_json(struct($"ts1",$"ts2",$"ts3",$"ts4",$"ce",$"cp",$"prediction")).alias("value")).writeStream
+.format("kafka")
+.option("kafka.bootstrap.servers", "ip-172-31-24-159.us-west-1.compute.internal:6667")
+.option("checkpointLocation", "checkpoint")
+.option("topic","predictive_maint_reading")
+.start()
