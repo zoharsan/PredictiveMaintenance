@@ -29,5 +29,5 @@ val sensorsDF = dfSensors.select(
     ,dfSensors("_c21").cast(DoubleType).as("pump_leak")
     ,dfSensors("_c22").cast(DoubleType).as("hydrau_bar")
     ,dfSensors("_c23").cast(DoubleType).as("stable")
-    
     )
+sensorsDF.createOrReplaceTempView("sensorDataProfiled")
