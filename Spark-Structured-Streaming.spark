@@ -1,3 +1,4 @@
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.streaming.ProcessingTime
 import spark.implicits._
 
@@ -5,22 +6,23 @@ import spark.implicits._
 val kafkaSensorDF = spark
 .readStream
 .format("kafka")
-.option("kafka.bootstrap.servers", "ip-172-31-24-159.us-west-1.compute.internal:6667")
+.option("kafka.bootstrap.servers", "demo.hortonworks.com:6667")
 .option("subscribe", "rig_sensor_data")
 .option("failOnDataLoss", "false")
 .option("startingOffsets", "latest")
 .load()
 
+
 // Load the LogisticRegressionModel
 import org.apache.spark.ml.PipelineModel
-val LGRModel = PipelineModel.read.load("hdfs://ip-172-31-24-159.us-west-1.compute.internal:8020/models/2018-12-13_15_50_39-LR-Cooling");
+val LGRModel = PipelineModel.read.load("hdfs://demo.hortonworks.com:8020/models/LR-Cooling");
 
 //Parsing the data set in JSON and applying transformations on the timestamp
 import org.apache.spark.sql.types._
 val SensorSchema = (new StructType)
-.add("processingtime",LongType)
+.add("ProcessingTime",LongType)
 .add("cycleid",IntegerType)
-.add("tstamp",LongType)
+.add("timestamp",LongType)
 .add("psa_bar",FloatType)
 .add("psb_bar",FloatType)
 .add("psc_bar",FloatType)
@@ -39,12 +41,12 @@ val SensorSchema = (new StructType)
 .add("eff_fact_pct",FloatType)
 
 
+
 val SensorDF = kafkaSensorDF.select(from_json($"value".cast("string"), SensorSchema).as("SensorJSON"))
-val SensorDF2 = SensorDF.withColumn("timestamp", from_unixtime(SensorDF.col("SensorJSON.processingtime").divide(1000)).cast(TimestampType))
+val SensorDF2 = SensorDF.withColumn("timestamp", from_unixtime(SensorDF.col("SensorJSON.ProcessingTime").divide(1000)).cast(TimestampType))
 val SensorDF3 = SensorDF2.select("timestamp","SensorJSON.tsa_temp","SensorJSON.tsb_temp","SensorJSON.tsc_temp","SensorJSON.tsd_temp","SensorJSON.cool_eff_pct","SensorJSON.cool_pwr_kw")
 
-
-//Calculating average aggregates over 1 minute window 
+//Calculating average aggregates over 1 minute window
 //as the Spark ML model uses 1 minute averages of sensor readings as input
 
 val FormatDF = SensorDF3.withWatermark("timestamp","1 minutes").groupBy(window($"timestamp", "1 minute"))
@@ -57,6 +59,7 @@ avg("cool_eff_pct").alias("ce"),
 avg("cool_pwr_kw").alias("cp")
 ).toDF("window","ts1","ts2","ts3","ts4","ce","cp")
 
+
 //Using the Spark ML pipeline model to score in real-time
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.ml.linalg.Vectors
@@ -66,10 +69,11 @@ val VectorDF = assembler.transform(FormatDF.na.drop)
 
 val predictions =  LGRModel.transform(VectorDF).select("ts1", "ts2", "ts3","ts4","ce","cp","prediction")
 
+
 //Write prediction back to a kafka queue
 val SinkQuery = predictions.select(to_json(struct($"ts1",$"ts2",$"ts3",$"ts4",$"ce",$"cp",$"prediction")).alias("value")).writeStream
 .format("kafka")
-.option("kafka.bootstrap.servers", "ip-172-31-24-159.us-west-1.compute.internal:6667")
+.option("kafka.bootstrap.servers", "demo.hortonworks.com:6667")
 .option("checkpointLocation", "checkpoint")
 .option("topic","predictive_maint_reading")
 .start()
